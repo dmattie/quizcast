@@ -175,6 +175,17 @@ play_server <- function(input, output, session) {
     me <- reactiveVal(NULL)
     notice <- reactiveVal("")
 
+    adopt <- function(a) {
+      if (!alias_taken(a)) register_player(a)
+      mark_live(a, +1L)
+      me(a)
+      notice("")
+      # The phone keeps the name so a reload after a screen lock lands back in
+      # the game instead of at the name gate.
+      session$sendCustomMessage("remember", list(alias = a))
+      session$onSessionEnded(function() mark_live(a, -1L))
+    }
+
     observeEvent(input$join, {
       a <- clean_alias(input$alias)
       if (!nzchar(a)) {
@@ -182,11 +193,21 @@ play_server <- function(input, output, session) {
       } else if (alias_taken(a) && is_live(a)) {
         notice("Someone in this room is already using that name.")
       } else {
-        if (!alias_taken(a)) register_player(a)
-        mark_live(a, +1L)
-        me(a)
-        notice("")
-        session$onSessionEnded(function() mark_live(a, -1L))
+        adopt(a)
+      }
+    })
+
+    # A phone that slept dropped its socket, so the page reloads itself and
+    # offers the stored alias back. Same rule as a manual join: a name is only
+    # reclaimable while nobody else holds an open socket on it. This is
+    # convenience, not authentication.
+    observeEvent(input$resume, {
+      a <- clean_alias(input$resume)
+      req(nzchar(a), is.null(me()))
+      if (alias_taken(a) && is_live(a)) {
+        session$sendCustomMessage("forget", list())
+      } else {
+        adopt(a)
       }
     })
 

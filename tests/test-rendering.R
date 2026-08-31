@@ -103,6 +103,36 @@ testServer(play_server, {
   shows("final screen", output$play_body, "Final. Nice work.")
 })
 
+group("Coming back from a locked phone")
+
+testServer(play_server, {
+  reset_game(FALSE); start_quiz(load_quiz("quizzes/demo-neuro"))
+  register_player("Ada"); mark_live("Ada", +1L)
+
+  # Still holding an open socket: the name is not up for grabs.
+  session$setInputs(resume = "Ada"); session$flushReact()
+  shows("a live name is not resumable", output$play_body, "Enter a name")
+
+  # The phone slept, so that socket closed.
+  mark_live("Ada", -1L)
+  session$setInputs(resume = "Ada"); session$flushReact()
+  hides("resumed straight past the gate", output$play_body, "Enter a name")
+  shows("back under the same name", output$play_body, "Ada")
+  eq("no duplicate player", length(GAME$players), 1L)
+
+  # Score and answers survive, because they never lived in the session.
+  open_question(1L); GAME$opened_at <- Sys.time() - 1
+  session$setInputs(opt_2 = 1); session$flushReact()
+  ok("can answer after resuming", isTRUE(GAME$answers[["Ada"]]$correct))
+})
+
+testServer(play_server, {
+  reset_game(FALSE)
+  session$setInputs(resume = "   "); session$flushReact()
+  shows("a blank stored name is ignored", output$play_body, "Enter a name")
+  eq("and registers nobody", length(GAME$players), 0L)
+})
+
 group("Host")
 
 testServer(admin_server, {

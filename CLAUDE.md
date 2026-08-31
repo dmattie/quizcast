@@ -94,9 +94,18 @@ front of a room full of people.
   on the projector. Don't try to route around this.
 - An open websocket keeps the Azure replica alive, so scale-to-zero only
   happens once the projector and admin tabs are closed.
-- A phone that sleeps drops its socket. `mark_live` / `is_live` track open
-  sockets so a student can reclaim their alias on reload. This is convenience,
-  not authentication.
+- A phone that sleeps drops its socket, and Shiny then lays
+  `#shiny-disconnected-overlay` over the page, which dims it and swallows every
+  tap. That overlay is hidden in CSS; `Recover` in `www/quiz.js` reloads
+  instead, and the alias comes back from `localStorage` through the `resume`
+  input. `mark_live` / `is_live` still gate the reclaim: a name is only
+  resumable while nobody else holds an open socket on it. Convenience, not
+  authentication.
+- `Recover` never reloads a page that isn't visible. A locked phone left in a
+  pocket would otherwise wake the container and hold the Azure replica open all
+  evening, billing. It also stops auto-reloading after four attempts in a
+  minute and waits for a tap, so a room full of phones can't hammer a server
+  that is actually down.
 - `qrcode` is optional. `qr_svg` returns `NULL` on failure and the lobby falls
   back to showing the URL. Keep it degradable.
 - Question files arrive from other people's machines, so `read_question`

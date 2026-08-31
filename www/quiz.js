@@ -171,11 +171,76 @@
     new MutationObserver(apply).observe(document.body, { childList: true, subtree: true });
   }
 
+  /* ---------------- surviving a locked phone ---------------- */
+  /* When the websocket closes, Shiny lays a grey overlay over the page that
+     swallows every tap. On a phone that has just been unlocked this reads as a
+     frozen app. The socket is gone either way, so the only real recovery is a
+     reload, and two rules keep that from becoming a nuisance:
+
+       - never reload a page nobody is looking at. A locked phone must not wake
+         the container and hold the Azure replica open, billing, all evening.
+       - give up after a few quick failures, so 50 phones cannot hammer a
+         server that is genuinely down. Then it is one tap, deliberately. */
+  var Recover = {
+    dead: false, banner: null,
+
+    init: function () {
+      var self = this;
+      document.addEventListener("shiny:disconnected", function () {
+        self.dead = true;
+        self.show("Reconnecting\u2026");
+        if (document.visibilityState === "visible") self.attempt();
+      });
+      document.addEventListener("visibilitychange", function () {
+        if (self.dead && document.visibilityState === "visible") self.attempt();
+      });
+    },
+
+    attempt: function () {
+      if (this.tooMany()) {
+        this.show("Tap to reconnect", true);
+        return;
+      }
+      // Jitter, because a server restart disconnects the whole room at once.
+      setTimeout(function () { location.reload(); }, 300 + Math.random() * 1200);
+    },
+
+    tooMany: function () {
+      var now = Date.now(), hist = [];
+      try { hist = JSON.parse(sessionStorage.getItem("qc-reloads") || "[]"); }
+      catch (e) { hist = []; }
+      hist = hist.filter(function (t) { return now - t < 60000; });
+      hist.push(now);
+      try { sessionStorage.setItem("qc-reloads", JSON.stringify(hist)); } catch (e) {}
+      return hist.length > 4;
+    },
+
+    show: function (text, tappable) {
+      if (!this.banner) {
+        this.banner = document.createElement("div");
+        this.banner.className = "reconnect";
+        document.body.appendChild(this.banner);
+      }
+      this.banner.textContent = text;
+      this.banner.classList.toggle("tappable", !!tappable);
+      this.banner.onclick = tappable ? function () { location.reload(); } : null;
+    }
+  };
+
   /* ---------------- wiring ---------------- */
   document.addEventListener("DOMContentLoaded", function () {
     var canvas = document.getElementById("trace");
     if (canvas) Trace.init(canvas);
     audioSetup();
+    Recover.init();
+  });
+
+  /* Offer the stored alias back as soon as there is a socket to offer it on.
+     Only play_server listens for it; the other roles ignore it. */
+  document.addEventListener("shiny:connected", function () {
+    var a = null;
+    try { a = localStorage.getItem("qc-alias"); } catch (e) {}
+    if (a) Shiny.setInputValue("resume", a, { priority: "event" });
   });
 
   whenShiny(function () {
@@ -204,6 +269,15 @@
     });
 
     Shiny.addCustomMessageHandler("celebrate", celebrate);
+
+    Shiny.addCustomMessageHandler("remember", function (msg) {
+      try { localStorage.setItem("qc-alias", msg.alias); } catch (e) {}
+    });
+
+    // The name was taken by someone with an open socket. Stop offering it.
+    Shiny.addCustomMessageHandler("forget", function () {
+      try { localStorage.removeItem("qc-alias"); } catch (e) {}
+    });
   });
 
   /* Enter submits the join form. */

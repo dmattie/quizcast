@@ -356,6 +356,21 @@ html, body {
   .media img { max-height: 32vh; }
 }
 
+/* Shiny's disconnect overlay dims the page and eats every tap, which on a
+   just-unlocked phone is indistinguishable from a crash. quiz.js runs the real
+   recovery, so this gets out of the way. */
+#shiny-disconnected-overlay { display: none !important; }
+
+.reconnect {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 9998;
+  padding: 14px 18px; text-align: center;
+  background: var(--raise); color: var(--dim);
+  border-top: 1px solid var(--line);
+  font-family: var(--cond); font-size: .9rem;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.reconnect.tappable { background: var(--ch2); color: var(--ink); cursor: pointer; }
+
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
   .trace { display: none; }

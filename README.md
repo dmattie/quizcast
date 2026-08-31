@@ -239,10 +239,11 @@ than a few milliseconds, so 50 students is well within reach, but that is the
 one thing to watch as class size grows. If it ever strains, the fix is to move
 answer submission off the reactive path, not to add replicas.
 
-A student whose phone sleeps and drops the websocket can rejoin with the same
-alias. The name is only held while a socket is open, which does mean aliases
-are reclaimable by anyone who types them, fine for a classroom and not a
-security boundary.
+A student whose phone sleeps and drops the websocket recovers on its own: the
+page reloads when they unlock it and picks their name back up. The name is only
+held while a socket is open, which does mean aliases are reclaimable by anyone
+who types them, fine for a classroom and not a security boundary. Their score
+is never in the phone — it lives on the server — so a reload costs nothing.
 
 ## Working on it with Claude Code
 
