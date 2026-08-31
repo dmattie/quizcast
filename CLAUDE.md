@@ -114,6 +114,11 @@ front of a room full of people.
   on the projector. Don't try to route around this.
 - An open websocket keeps the Azure replica alive, so scale-to-zero only
   happens once the projector and admin tabs are closed.
+- **Every `addCustomMessageHandler` handler must take exactly one argument.**
+  Shiny checks `handler.length !== 1` and throws *during registration*, which
+  aborts the rest of the block — so a zero-argument handler silently prevents
+  every handler declared after it from ever being registered. That is how a
+  no-argument `celebrate` stopped `remember` and `forget` from existing at all.
 - **Shiny's client events arrive through jQuery, not the DOM.** `shiny.js`
   fires them as `$(document).trigger({type: "shiny:disconnected"})`, and a
   native `document.addEventListener("shiny:disconnected", ...)` never receives
@@ -144,6 +149,10 @@ front of a room full of people.
   processor's non-breaking space after the `#` is the classic failure — the
   heading looks perfect and matches nothing. Don't add whitespace handling to
   the individual matchers; fix it in the reader.
+- `www/audio/*` is gitignored on purpose: real music is usually licensed and
+  does not belong in a public image. A track that plays locally will 404 in
+  Azure unless it was force-added or the quiz points at an `https://` URL. The
+  projector button says "Track missing" rather than "Blocked" in that case.
 - Shiny auto-sources a directory named `R/`. Helpers live in `lib/` and are
   sourced explicitly to avoid double-loading `GAME`.
 

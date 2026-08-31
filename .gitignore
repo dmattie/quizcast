@@ -10,7 +10,6 @@
 
 # Session exports and any real audio, which is usually licensed.
 quizcast-*.csv
-www/audio/*
 !www/audio/.gitkeep
 
 .DS_Store

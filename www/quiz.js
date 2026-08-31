@@ -82,7 +82,10 @@
   };
 
   /* ---------------- confetti ---------------- */
-  function celebrate() {
+  /* One argument, always: Shiny rejects a handler whose `length` is not 1, and
+     the throw happens during registration, so every handler after it in the
+     block is silently never registered. */
+  function celebrate(_msg) {
     if (reduced) return;
     var cv = document.createElement("canvas");
     cv.style.cssText =
@@ -155,7 +158,11 @@
       apply();
       if (a.paused) {
         a.play().then(function () { btn.textContent = "Pause music"; })
-                .catch(function () { btn.textContent = "Blocked"; });
+                .catch(function () {
+                  // A missing file and a blocked autoplay both reject here,
+                  // and they need different fixes.
+                  btn.textContent = a.error ? "Track missing" : "Blocked";
+                });
       } else {
         a.pause();
         btn.textContent = "Play music";
@@ -388,7 +395,7 @@
 
     // That name belongs to another device. Stop offering it; keep the token,
     // which is this phone's identity and not tied to any one name.
-    Shiny.addCustomMessageHandler("forget", function () {
+    Shiny.addCustomMessageHandler("forget", function (_msg) {
       try { localStorage.removeItem("qc-alias"); } catch (e) {}
     });
   });
