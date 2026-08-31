@@ -16,6 +16,7 @@ md_html <- function(txt) {
 #   time_limit: 30
 #   points: 1000
 #   media: https://example.org/figure.png
+#   trivia: Shown to a student who has locked in, while the room catches up.
 #   ---
 #
 #   # Prompt text?
@@ -118,6 +119,7 @@ parse_question <- function(path) {
     correct    = which(correct),
     multi      = sum(correct) > 1,
     explain_html = md_html(explain),
+    trivia_html = md_html(meta$trivia %||% ""),
     media      = meta$media %||% NULL,
     media_alt  = meta$media_alt %||% "Question figure",
     time_limit = as.numeric(meta$time_limit %||% 30),

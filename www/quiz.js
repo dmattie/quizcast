@@ -200,11 +200,24 @@
           self.ready = true;
           self.dead = false;
           self.hide();
-          // Offer the stored alias back so a reload lands in the game rather
-          // than at the name gate. play_server is the only listener.
-          var a = null;
-          try { a = localStorage.getItem("qc-alias"); } catch (e) {}
-          if (a) Shiny.setInputValue("resume", a, { priority: "event" });
+        });
+
+        // Not shiny:connected. That one fires inside socket.onopen *before*
+        // Shiny sends its own init message, so an input set there overtakes
+        // the handshake and is discarded. sessioninitialized is the server
+        // saying the session exists and is listening.
+        $(document).on("shiny:sessioninitialized", function () {
+          var a = null, t = null;
+          try {
+            a = localStorage.getItem("qc-alias");
+            t = localStorage.getItem("qc-token");
+          } catch (e) {}
+          // The token goes first: a manual join needs it already in place.
+          Shiny.setInputValue("devtoken", t || "");
+          if (a) {
+            Shiny.setInputValue("resume", { alias: a, token: t || "" },
+                                { priority: "event" });
+          }
         });
 
         $(document).on("shiny:disconnected", function () { self.fail(); });
@@ -270,12 +283,72 @@
     hide: function () { if (this.banner) this.banner.remove(); this.banner = null; }
   };
 
+  /* ---------------- something to read while waiting ---------------- */
+  /* A student who has locked in sees the question's own trivia when the file
+     carries any. When it doesn't, the phone asks for a dad joke — from the
+     phone, never from the server. Shiny is one R thread, so a blocking HTTP
+     call in the render path would freeze all 50 students at once, and a slow
+     third party would take the lecture with it.
+
+     The element ships with its fallback text already in it, so every way this
+     can fail — offline, blocked by campus wifi, CORS, a slow response, an old
+     browser with no fetch — leaves the right words on screen and does nothing
+     else. Replace this URL with "" to switch the whole thing off. */
+  var JOKE_URL = "https://icanhazdadjoke.com/";
+
+  var Jokes = {
+    cache: {}, pending: null,
+
+    scan: function () {
+      if (!JOKE_URL || !window.fetch) return;
+      var el = document.querySelector(".joke[data-q]");
+      if (!el) return;
+      var q = el.getAttribute("data-q");
+
+      // Cached: the student's page re-renders every time somebody else
+      // answers, and one joke per question is the point.
+      if (this.cache[q]) {
+        if (el.textContent !== this.cache[q]) el.textContent = this.cache[q];
+        return;
+      }
+      if (this.pending === q) return;
+      this.pending = q;
+
+      var self = this;
+      var ctl = ("AbortController" in window) ? new AbortController() : null;
+      var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 2500);
+      var done = function () {
+        clearTimeout(timer);
+        if (self.pending === q) self.pending = null;
+      };
+
+      fetch(JOKE_URL, {
+        headers: { "Accept": "application/json" },
+        signal: ctl ? ctl.signal : undefined
+      })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) {
+          done();
+          if (!j || !j.joke) return;
+          self.cache[q] = j.joke;
+          var cur = document.querySelector('.joke[data-q="' + q + '"]');
+          if (cur && cur.textContent !== j.joke) cur.textContent = j.joke;
+        })
+        .catch(done);
+    }
+  };
+
   /* ---------------- wiring ---------------- */
   document.addEventListener("DOMContentLoaded", function () {
     var canvas = document.getElementById("trace");
     if (canvas) Trace.init(canvas);
     audioSetup();
     Recover.init();
+    Jokes.scan();
+    // Shiny replaces the whole student panel on every render, so the hook has
+    // to be looked for again afterwards rather than bound once.
+    new MutationObserver(function () { Jokes.scan(); })
+      .observe(document.body, { childList: true, subtree: true });
   });
 
   whenShiny(function () {
@@ -306,10 +379,15 @@
     Shiny.addCustomMessageHandler("celebrate", celebrate);
 
     Shiny.addCustomMessageHandler("remember", function (msg) {
-      try { localStorage.setItem("qc-alias", msg.alias); } catch (e) {}
+      try {
+        localStorage.setItem("qc-alias", msg.alias);
+        if (msg.token) localStorage.setItem("qc-token", msg.token);
+      } catch (e) {}
+      if (msg.token) Shiny.setInputValue("devtoken", msg.token);
     });
 
-    // The name was taken by someone with an open socket. Stop offering it.
+    // That name belongs to another device. Stop offering it; keep the token,
+    // which is this phone's identity and not tied to any one name.
     Shiny.addCustomMessageHandler("forget", function () {
       try { localStorage.removeItem("qc-alias"); } catch (e) {}
     });

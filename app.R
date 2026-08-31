@@ -175,39 +175,52 @@ play_server <- function(input, output, session) {
     me <- reactiveVal(NULL)
     notice <- reactiveVal("")
 
-    adopt <- function(a) {
-      if (!alias_taken(a)) register_player(a)
+    # The phone's device token, set from localStorage once the session is up.
+    dev_token <- function() {
+      t <- input$devtoken
+      if (is.null(t)) "" else as.character(t)[1]
+    }
+
+    adopt <- function(a, tok) {
+      a <- canonical_alias(a)
+      if (!nzchar(tok)) tok <- new_token()
+      if (!alias_taken(a)) register_player(a, tok) else claim_token(a, tok)
       mark_live(a, +1L)
       me(a)
       notice("")
-      # The phone keeps the name so a reload after a screen lock lands back in
-      # the game instead of at the name gate.
-      session$sendCustomMessage("remember", list(alias = a))
+      # The phone keeps the name and the token, so a reload after a screen lock
+      # lands back in the game instead of at the name gate.
+      session$sendCustomMessage("remember", list(alias = a, token = tok))
       session$onSessionEnded(function() mark_live(a, -1L))
     }
 
     observeEvent(input$join, {
       a <- clean_alias(input$alias)
+      tok <- dev_token()
       if (!nzchar(a)) {
         notice("Pick a name first.")
-      } else if (alias_taken(a) && is_live(a)) {
-        notice("Someone in this room is already using that name.")
+      } else if (!may_claim(a, tok)) {
+        notice(if (is_live(canonical_alias(a)))
+                 "Someone in this room is already using that name."
+               else sprintf("That name is taken. Try \"%s\".", suggest_alias(a)))
       } else {
-        adopt(a)
+        adopt(a, tok)
       }
     })
 
     # A phone that slept dropped its socket, so the page reloads itself and
-    # offers the stored alias back. Same rule as a manual join: a name is only
-    # reclaimable while nobody else holds an open socket on it. This is
-    # convenience, not authentication.
+    # offers its stored name and token back. The token is what separates
+    # rejoining from taking over: without a match this is somebody else's name
+    # and the phone is told to forget it.
     observeEvent(input$resume, {
-      a <- clean_alias(input$resume)
+      r <- input$resume
+      a <- clean_alias(if (is.list(r)) r$alias else r)
+      tok <- if (is.list(r)) as.character(r$token %||% "") else ""
       req(nzchar(a), is.null(me()))
-      if (alias_taken(a) && is_live(a)) {
+      if (!may_claim(a, tok)) {
         session$sendCustomMessage("forget", list())
       } else {
-        adopt(a)
+        adopt(a, tok)
       }
     })
 
@@ -290,7 +303,17 @@ play_server <- function(input, output, session) {
         picked <- paste(vapply(mine$sel, tag_letter, character(1)), collapse = " + ")
         return(tagList(bar, div(class = "wait",
           div(class = "lockedtag mono", picked),
-          p(class = "ranklead", "Locked in. Eyes up."))))
+          p(class = "ranklead", "Locked in."),
+          if (nzchar(q$trivia_html))
+            div(class = "trivia", HTML(q$trivia_html))
+          else
+            # No trivia in the file, so the phone goes looking for a joke on
+            # its own. That fetch belongs in the browser and never here: one
+            # blocking HTTP call in this single R thread would freeze all 50
+            # phones. The fallback text is already in place, so a request that
+            # is slow, refused or blocked simply leaves it standing.
+            div(class = "trivia joke", `data-q` = GAME$idx,
+                "Waiting for everyone else\u2026"))))
       }
 
       elapsed <- as.numeric(difftime(Sys.time(), GAME$opened_at, units = "secs"))

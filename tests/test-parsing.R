@@ -28,7 +28,13 @@ eq("media alt",              q$media_alt, "A figure")
 shows("context renders emphasis", q$context_html, "<em>context</em>")
 shows("context renders link",     q$context_html, "https://example.org")
 shows("explanation captured",     q$explain_html, "Because reasons")
+eq("no trivia unless asked for",  q$trivia_html, "")
 ok("options carry no <p> wrapper", !grepl("<p>", paste(q$options_html, collapse = "")))
+
+triv <- parse_question(write_q("triv.md", c(
+  "---", "trivia: The *first* fact.", "---",
+  "# Q", "", "- [x] A", "- [ ] B")))
+shows("trivia is rendered as markdown", triv$trivia_html, "<em>first</em>")
 
 group("Defaults and variants")
 

@@ -361,6 +361,15 @@ html, body {
    recovery, so this gets out of the way. */
 #shiny-disconnected-overlay { display: none !important; }
 
+/* Something to read while the rest of the room decides. Deliberately quiet:
+   it sits under the locked-in confirmation, not in place of it. */
+.trivia {
+  margin: 14px auto 0; max-width: 34ch;
+  color: var(--dim); font-size: .95rem; line-height: 1.5;
+}
+.trivia p { margin: 0; }
+.trivia a { color: var(--ch2); }
+
 .reconnect {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 9998;
   padding: 14px 18px; text-align: center;

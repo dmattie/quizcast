@@ -34,6 +34,7 @@ time_limit: 30
 points: 1000
 media: https://example.org/figure.png
 media_alt: "What the figure shows"
+trivia: "Shown to a student who has locked in, while the room catches up."
 ---
 
 # Which signal do midbrain dopamine neurons encode?
@@ -46,6 +47,14 @@ Optional context paragraph. Takes [links](https://example.org) and *emphasis*.
 
 > Shown at reveal. Schultz, Dayan & Montague (1997).
 ```
+
+`trivia` is what a student reads on their phone once they've answered and are
+waiting for everyone else. Leave it out and the phone fetches a dad joke
+instead; if that fails for any reason — offline, campus wifi, a slow API — it
+says "Waiting for everyone else…" and nothing is lost. The request is made by
+the phone, never by the server, so a slow third party can never hold up the
+class. Each phone gets its own joke. To switch jokes off entirely, blank out
+`JOKE_URL` at the top of `www/quiz.js`.
 
 `- [x]` marks the correct answer. Mark two or more and the question
 automatically becomes select-all, scored on exact match. `media` can be any
@@ -240,10 +249,16 @@ one thing to watch as class size grows. If it ever strains, the fix is to move
 answer submission off the reactive path, not to add replicas.
 
 A student whose phone sleeps and drops the websocket recovers on its own: the
-page reloads when they unlock it and picks their name back up. The name is only
-held while a socket is open, which does mean aliases are reclaimable by anyone
-who types them, fine for a classroom and not a security boundary. Their score
-is never in the phone — it lives on the server — so a reload costs nothing.
+page reloads when they unlock it and picks their name back up. Their score is
+never in the phone — it lives on the server — so a reload costs nothing.
+
+A name belongs to the phone that took it. The first join mints a token the
+phone keeps, and only that phone can rejoin under that name, so a classmate
+cannot type "Anne" while Anne's screen is locked and inherit her points; they
+are refused and offered "Anne 2" instead. This is not a security boundary — a
+student who clears their browser can start again under a new name, and one who
+clears it mid-quiz loses their score, which is what the host's kick control is
+for: drop the name and let them rejoin.
 
 ## Working on it with Claude Code
 

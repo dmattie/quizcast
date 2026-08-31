@@ -68,6 +68,20 @@ front of a room full of people.
    `junkpaths`, which is what makes a `../` entry harmless rather than
    something to sanitise.
 
+7. **A name belongs to the device that took it.** `new_token` mints a token on
+   first join, the phone keeps it in `localStorage`, and `may_claim` is the
+   single place that decides who may take a name: the token must match, or the
+   record must carry no token and nobody be live on it. This is what stops a
+   classmate typing "Anne" while Anne's phone is locked and walking off with
+   her score — automatic reconnection would otherwise have widened that gap.
+   It is not a security boundary: a student who clears storage mid-quiz loses
+   their name, and the host's kick control is the manual override.
+
+8. **Aliases are matched case-insensitively but scored by exact name.**
+   `canonical_alias` resolves a claim to the spelling already on the roster.
+   Skip it and "anne" claiming "Anne" plays against a player record that does
+   not exist — `submit_answer` records the answer and silently scores nothing.
+
 ## Conventions
 
 - The role split (`play_server` / `present_server` / `admin_server`) exists
@@ -80,6 +94,12 @@ front of a room full of people.
   `GAME`, so a rescan mid-class cannot disturb a game in progress. The upload
   controls are static in `admin_ui`, not in a `renderUI`, so the catalog
   changing doesn't rebuild a `fileInput` under the host's cursor.
+- The locked-in filler degrades in three steps: the question's own `trivia`,
+  then a dad joke fetched **by the phone**, then the fallback text the element
+  already contains. Nothing about it may touch the server — one blocking HTTP
+  call in this single R thread stops all 50 students, and a third-party outage
+  would take the lecture with it. `Jokes.scan` caches per question index
+  because the student panel re-renders every time anyone else answers.
 - Scoring: full points instantly, decaying to half at `time_limit`. The limit
   only affects scoring, never when a question closes. The host closes it.
 - Multi-select requires an exact set match. No partial credit, deliberately.
@@ -101,13 +121,15 @@ front of a room full of people.
   Use `$(document).on(...)` inside `whenShiny`, which waits for `window.jQuery`
   as well as `window.Shiny`. `visibilitychange` is a real DOM event and is
   fine with `addEventListener`.
+- **`shiny:connected` is too early to set an input.** It is triggered inside
+  `socket.onopen` *before* Shiny sends its own `init` message, so a
+  `setInputValue` there overtakes the handshake and is dropped. Anything that
+  hands a value to the server on load belongs on `shiny:sessioninitialized`.
 - A phone that sleeps drops its socket, and Shiny then lays
   `#shiny-disconnected-overlay` over the page, which dims it and swallows every
   tap. That overlay is hidden in CSS; `Recover` in `www/quiz.js` reloads
   instead, and the alias comes back from `localStorage` through the `resume`
-  input. `mark_live` / `is_live` still gate the reclaim: a name is only
-  resumable while nobody else holds an open socket on it. Convenience, not
-  authentication.
+  input, alongside the device token that makes the reclaim safe.
 - `Recover` never reloads a page that isn't visible. A locked phone left in a
   pocket would otherwise wake the container and hold the Azure replica open all
   evening, billing. It also stops auto-reloading after four attempts in a

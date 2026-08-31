@@ -42,11 +42,63 @@ alias_taken <- function(alias) {
   tolower(alias) %in% tolower(names(GAME$players))
 }
 
-register_player <- function(alias) {
+register_player <- function(alias, token = "") {
   p <- GAME$players
-  p[[alias]] <- list(score = 0, hits = 0, joined = Sys.time())
+  p[[alias]] <- list(score = 0, hits = 0, joined = Sys.time(), token = token)
   GAME$players <- p
   invisible(TRUE)
+}
+
+# Names are compared case-insensitively but scored by exact match, so a claim
+# has to resolve to the spelling already on the roster. Without this, "anne"
+# claiming "Anne" plays against a player record that does not exist: her
+# answers are recorded and score nothing.
+canonical_alias <- function(alias) {
+  nm <- names(isolate(GAME$players))
+  hit <- nm[tolower(nm) == tolower(alias)]
+  if (length(hit)) hit[1] else alias
+}
+
+# ---- device tokens ----------------------------------------------------------
+# A token is minted when a phone first takes a name and lives in that phone's
+# localStorage. It is what makes the name *that device's*: without it, an alias
+# whose owner has locked their phone could be picked up by anyone who typed it,
+# and the owner would then be locked out of their own score. Not a security
+# boundary — a classroom, not a bank — but it closes the gap that automatic
+# reconnection would otherwise widen.
+new_token <- function() paste(sample(c(letters, LETTERS, 0:9), 24L, TRUE), collapse = "")
+
+# Who may take this name. Ownership is by token; a name whose record carries
+# no token (registered before tokens existed, or by a test) falls back to the
+# old rule and is free while nobody holds an open socket on it.
+may_claim <- function(alias, token) {
+  a <- canonical_alias(alias)
+  p <- isolate(GAME$players)[[a]]
+  if (is.null(p)) return(TRUE)                        # nobody has it
+  tk <- p$token
+  if (!is.null(tk) && nzchar(tk)) return(identical(tk, token))
+  !is_live(a)
+}
+
+# An alias on the roster with no token — registered before tokens existed, or
+# by a test — belongs to the first device that claims it.
+claim_token <- function(alias, token) {
+  a <- canonical_alias(alias)
+  p <- GAME$players
+  if (!is.null(p[[a]]) && (is.null(p[[a]]$token) || !nzchar(p[[a]]$token))) {
+    p[[a]]$token <- token
+    GAME$players <- p
+  }
+}
+
+# Offered when a name is taken, so the second Anne is not left to invent
+# something on the spot in front of the room.
+suggest_alias <- function(alias) {
+  for (i in 2:9) {
+    cand <- clean_alias(paste(alias, i))
+    if (!alias_taken(cand)) return(cand)
+  }
+  clean_alias(paste(alias, sample(10:99, 1L)))
 }
 
 drop_player <- function(alias) {

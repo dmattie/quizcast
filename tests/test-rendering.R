@@ -85,12 +85,18 @@ testServer(play_server, {
   session$setInputs(opt_2 = 1); session$flushReact()
   shows("locks after answering", output$play_body, "Locked in")
   hides("options withdrawn once locked", output$play_body, "timerfill")
+  shows("the file's own trivia fills the wait", output$play_body, "Schultz's monkeys")
+  hides("so no joke is fetched", output$play_body, "joke")
 
   reveal_answer(); session$flushReact()
   shows("correct verdict", output$play_body, "verdict hit")
 
   open_question(2L); session$flushReact()
   session$setInputs(opt_3 = 1); session$flushReact()
+  o <- output$play_body
+  shows("a question with no trivia offers the joke hook", o, "trivia joke")
+  shows("carrying the fallback the phone can't break", o, "Waiting for everyone else")
+  shows("keyed to the question, so it fetches once", o, 'data-q="2"')
   reveal_answer(); session$flushReact()
   shows("wrong verdict", output$play_body, "verdict miss")
 
@@ -131,6 +137,67 @@ testServer(play_server, {
   session$setInputs(resume = "   "); session$flushReact()
   shows("a blank stored name is ignored", output$play_body, "Enter a name")
   eq("and registers nobody", length(GAME$players), 0L)
+})
+
+group("A name belongs to the phone that took it")
+
+testServer(play_server, {
+  reset_game(FALSE)
+  session$setInputs(devtoken = "phone-a", alias = "Anne", join = 1)
+  session$flushReact()
+  eq("Anne joins", names(GAME$players), "Anne")
+  eq("her phone's token is on the record", GAME$players[["Anne"]]$token, "phone-a")
+})
+
+# Anne's phone has locked, so she is no longer live. Another phone must not be
+# able to walk into her name and her score.
+testServer(play_server, {
+  session$setInputs(devtoken = "phone-b", alias = "Anne", join = 1)
+  session$flushReact()
+  shows("a second phone is refused", output$play_body, "That name is taken")
+  shows("and is offered a way forward", output$play_body, "Anne 2")
+  shows("still at the gate", output$play_body, "Enter a name")
+  eq("no second Anne on the roster", length(GAME$players), 1L)
+
+  session$setInputs(resume = list(alias = "Anne", token = "phone-b"))
+  session$flushReact()
+  shows("nor can it resume into her name", output$play_body, "Enter a name")
+
+  session$setInputs(alias = "Anne 2", join = 2); session$flushReact()
+  hides("but the suggested name works", output$play_body, "Enter a name")
+  eq("two players now", length(GAME$players), 2L)
+})
+
+# Anne unlocks her phone. Her own token gets her back in.
+testServer(play_server, {
+  session$setInputs(resume = list(alias = "Anne", token = "phone-a"))
+  session$flushReact()
+  hides("her own phone resumes", output$play_body, "Enter a name")
+  shows("under her own name", output$play_body, "Anne")
+  eq("and does not duplicate her", length(GAME$players), 2L)
+})
+
+# Case is not a way around it, and it is not a way to lose your score either:
+# the roster is matched case-insensitively but scored by exact name.
+testServer(play_server, {
+  session$setInputs(devtoken = "phone-c", alias = "anne", join = 1)
+  session$flushReact()
+  shows("lowercase anne is the same name", output$play_body, "That name is taken")
+})
+
+testServer(play_server, {
+  reset_game(FALSE)
+  session$setInputs(devtoken = "phone-a", alias = "Anne", join = 1)
+  session$flushReact()
+  mark_live("Anne", -1L)
+  session$setInputs(resume = list(alias = "ANNE", token = "phone-a"))
+  session$flushReact()
+  start_quiz(load_quiz("quizzes/demo-neuro"))
+  open_question(1L); GAME$opened_at <- Sys.time() - 1
+  session$setInputs(opt_2 = 1); session$flushReact()
+  eq("a differently-cased resume scores against the real record",
+     GAME$players[["Anne"]]$score > 0, TRUE)
+  eq("and creates no shadow player", length(GAME$players), 1L)
 })
 
 group("Host")
