@@ -1,0 +1,362 @@
+/* Quizcast — a lab-instrument palette, not a game show.
+   Ground: deep petrol. Answers: a four-channel recording montage. */
+
+:root {
+  --ink:    #0E1D27;
+  --panel:  #16303E;
+  --raise:  #1D3D4E;
+  --line:   rgba(143,166,178,.22);
+  --bone:   #E8E4DB;
+  --dim:    #8FA6B2;
+  --ch1:    #D6336C;
+  --ch2:    #15A9A6;
+  --ch3:    #F2C14E;
+  --ch4:    #8B7BC4;
+  --sans:   "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --cond:   "IBM Plex Sans Condensed", "IBM Plex Sans", system-ui, sans-serif;
+  --mono:   "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --pad:    clamp(14px, 3vw, 32px);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--ink);
+  color: var(--bone);
+  font-family: var(--sans);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.eyebrow {
+  font-family: var(--cond);
+  font-weight: 600;
+  font-size: .78rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+:focus-visible { outline: 2px solid var(--ch3); outline-offset: 3px; }
+
+/* ========================= STUDENT ======================================== */
+
+.play { min-height: 100dvh; display: flex; flex-direction: column; padding: var(--pad); gap: 14px; }
+/* uiOutput wraps the body in its own div, so the column lives here. */
+.play > .shiny-html-output { flex: 1; display: flex; flex-direction: column; gap: 14px; }
+
+.gate { flex: 1; display: grid; place-items: center; }
+.gatecard { width: min(420px, 100%); text-align: center; }
+.wordmark {
+  font-family: var(--cond); font-weight: 700;
+  font-size: clamp(2.4rem, 12vw, 3.4rem);
+  letter-spacing: -.02em; line-height: 1;
+}
+.wordmark::after {
+  content: ""; display: block; height: 3px; width: 56px;
+  margin: 14px auto 0; background: var(--ch2);
+}
+.gatelead { color: var(--dim); margin: 18px 0 24px; font-size: 1rem; }
+
+.aliasinput {
+  width: 100%; padding: 16px 18px; font-size: 1.15rem;
+  font-family: var(--sans); color: var(--bone);
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 3px; margin-bottom: 12px;
+}
+.aliasinput::placeholder { color: #5E7784; }
+
+.bigbtn, .play .btn:not(.opt) {
+  width: 100%; padding: 17px; border: 0; border-radius: 3px;
+  background: var(--ch2); color: var(--ink);
+  font-family: var(--cond); font-weight: 700; font-size: 1.1rem;
+  letter-spacing: .06em; text-transform: uppercase; cursor: pointer;
+}
+.notice { margin-top: 14px; color: var(--ch3); font-size: .92rem; }
+
+.playbar {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding-bottom: 10px; border-bottom: 1px solid var(--line);
+}
+.who { font-weight: 600; font-size: .98rem; }
+.score { color: var(--ch2); font-size: 1.05rem; font-weight: 600; }
+
+.timer { height: 5px; background: var(--panel); overflow: hidden; }
+.timerfill {
+  height: 100%; width: 100%; background: var(--ch3);
+  transform-origin: left; animation: drain linear forwards;
+}
+@keyframes drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+.qmini { flex: 0 0 auto; font-size: 1.02rem; line-height: 1.45; color: var(--bone); }
+.qmini p { margin: 0; }
+
+.optgrid { display: flex; flex-direction: column; gap: 10px; }
+
+.opt {
+  display: flex; align-items: center; gap: 14px; width: 100%;
+  padding: 16px 18px; text-align: left; cursor: pointer;
+  background: var(--panel); color: var(--bone);
+  border: 1px solid var(--line); border-left: 5px solid var(--cc);
+  border-radius: 3px; font-family: var(--sans); font-size: 1.02rem;
+  line-height: 1.35; white-space: normal;
+  transition: background .12s ease, transform .12s ease;
+}
+.opt > .action-label {
+  display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
+}
+.opt:active { transform: scale(.985); }
+.ch1 { --cc: var(--ch1); } .ch2 { --cc: var(--ch2); }
+.ch3 { --cc: var(--ch3); } .ch4 { --cc: var(--ch4); }
+.letter {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 2px;
+  background: var(--cc); color: var(--ink);
+  font-size: 1.3rem; font-weight: 700; line-height: 1;
+}
+.opttext { flex: 1; }
+
+.multinote { color: var(--dim); font-size: .88rem; }
+
+.wait { flex: 1; display: flex; flex-direction: column; align-items: center;
+        justify-content: center; gap: 14px; text-align: center; color: var(--dim); }
+.pulse {
+  width: 12px; height: 12px; border-radius: 50%; background: var(--ch2);
+  animation: beat 1.6s ease-in-out infinite;
+}
+@keyframes beat { 0%,100% { opacity: .25; transform: scale(.8); }
+                  50%     { opacity: 1;   transform: scale(1.15); } }
+.rankbig { font-size: clamp(3.5rem, 22vw, 6rem); font-weight: 600; color: var(--bone); line-height: 1; }
+.ranklead { margin: 0; }
+.lockedtag {
+  font-size: 2.4rem; font-weight: 600; color: var(--ch2);
+  border: 1px solid var(--line); padding: 12px 26px; border-radius: 3px;
+}
+
+.verdict { flex: 1; display: flex; flex-direction: column; align-items: center;
+           justify-content: center; gap: 10px; text-align: center; }
+.verdicttag {
+  font-family: var(--cond); font-weight: 700; text-transform: uppercase;
+  letter-spacing: .12em; font-size: 1.5rem;
+}
+.hit .verdicttag { color: var(--ch2); }
+.miss .verdicttag { color: var(--dim); }
+.gain { font-size: 3.2rem; font-weight: 600; color: var(--bone); }
+.verdict p { color: var(--dim); margin: 0; }
+
+/* ========================= PROJECTOR ===================================== */
+
+.present { min-height: 100dvh; position: relative; overflow: hidden; }
+.stage {
+  padding: clamp(24px, 3.5vw, 56px);
+  padding-bottom: 120px;
+  display: flex; flex-direction: column; gap: clamp(14px, 2vw, 26px);
+  min-height: 100dvh;
+}
+.stagehead { display: flex; gap: 28px; align-items: baseline;
+             border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+.stagehead .eyebrow:nth-child(2) { flex: 1; color: var(--bone); }
+
+/* The prompt zone eats whatever room the options leave, so the options sit at
+   the same height on every question whether or not there is media beside it. */
+.qzone {
+  flex: 1 1 auto; min-height: 0; overflow: hidden;
+  display: flex; align-items: flex-start; gap: clamp(20px, 3vw, 48px);
+}
+.qmain { flex: 1 1 auto; min-width: 0;
+         display: flex; flex-direction: column; gap: clamp(12px, 1.5vw, 20px); }
+.qzone.withmedia .qmain,
+.qzone.withmedia .media { flex: 0 0 50%; min-width: 0; }
+
+.qtext {
+  font-family: var(--cond); font-weight: 700;
+  font-size: clamp(2rem, 4.2vw, 3.6rem);
+  line-height: 1.08; letter-spacing: -.015em; margin: 0;
+}
+.qtext p { margin: 0; }
+.qzone.withmedia .qtext { max-width: 22ch; }
+.qcontext { color: var(--dim); font-size: clamp(1rem, 1.4vw, 1.35rem); max-width: 60ch; }
+.qcontext a { color: var(--ch2); }
+/* Half the viewport, hard. A tall figure allowed to size itself would push
+   the options off the bottom of the projector. */
+.media { align-self: flex-start; max-height: 50vh; display: flex;
+         align-items: flex-start; justify-content: center; }
+.media img { max-height: 50vh; max-width: 100%; object-fit: contain; border-radius: 3px; }
+
+.optgrid.big {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: clamp(10px, 1.4vw, 18px); margin-top: auto; flex: 0 0 auto;
+}
+.optgrid.big .opt {
+  font-size: clamp(1.05rem, 1.6vw, 1.5rem); padding: clamp(16px, 1.8vw, 26px);
+  position: relative; cursor: default; align-items: flex-start;
+}
+.optgrid.big .letter {
+  width: clamp(34px, 3vw, 46px); height: clamp(34px, 3vw, 46px);
+  font-size: clamp(1.15rem, 1.7vw, 1.6rem);
+}
+.opt.wrong { opacity: .3; }
+.opt.right { background: var(--raise); box-shadow: inset 0 0 0 1px var(--ch2); }
+
+.distbar {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 22px;
+  display: flex; align-items: center;
+}
+.distfill { height: 100%; background: rgba(143,166,178,.16); transition: width .5s ease; }
+.opt.right .distfill { background: rgba(21,169,166,.28); }
+.distnum { position: absolute; right: 10px; font-size: .8rem; color: var(--dim); }
+
+.explain {
+  border-left: 3px solid var(--ch3); padding-left: 18px;
+  color: var(--dim); font-size: clamp(.95rem, 1.25vw, 1.2rem);
+  max-width: 80ch; line-height: 1.5;
+}
+.explain p { margin: 0; }
+.explain a { color: var(--ch2); }
+
+/* lobby */
+.lobbystage { display: grid; grid-template-columns: 1.4fr 1fr;
+              grid-template-rows: 1fr auto; gap: 40px; align-items: center; }
+.lobbyleft { display: flex; flex-direction: column; gap: 18px; }
+.joinhead { font-family: var(--cond); font-weight: 700; margin: 0;
+            font-size: clamp(2rem, 4vw, 3.4rem); line-height: 1.05; }
+.joinurl {
+  font-size: clamp(1.1rem, 2.1vw, 1.9rem); color: var(--ch2);
+  border: 1px solid var(--line); padding: 14px 20px; border-radius: 3px;
+  display: inline-block; word-break: break-all;
+}
+.counter { display: flex; align-items: baseline; gap: 12px; }
+.cnum { font-size: clamp(3rem, 7vw, 6rem); font-weight: 600; line-height: 1; }
+.clab { color: var(--dim); text-transform: uppercase; letter-spacing: .14em; font-size: .9rem; }
+.lobbyright { justify-self: center; }
+.roster { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px;
+  font-size: .92rem; color: var(--dim);
+  animation: arrive .4s ease both;
+}
+@keyframes arrive { from { opacity: 0; transform: translateY(6px); } }
+
+/* standings + final */
+.boardlist, .restlist { display: flex; flex-direction: column; gap: 10px; }
+.boardrow { display: grid; grid-template-columns: 44px 1fr 3fr auto;
+            gap: 18px; align-items: center; font-size: clamp(1rem, 1.6vw, 1.5rem); }
+.rbar { height: 12px; background: var(--panel); }
+.rbarfill { height: 100%; background: var(--ch2); transition: width .6s ease; }
+.rrank { color: var(--dim); }
+.rscore { color: var(--ch2); }
+
+.finalstage { justify-content: center; align-items: center; text-align: center; }
+.winners { display: flex; gap: 48px; flex-wrap: wrap; justify-content: center; }
+.winner { display: flex; flex-direction: column; align-items: center; gap: 8px;
+          animation: rise .7s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes rise { from { opacity: 0; transform: translateY(28px); } }
+.crown {
+  font-family: var(--mono); font-size: 1rem; color: var(--ink);
+  background: var(--ch3); width: 34px; height: 34px; border-radius: 50%;
+  display: grid; place-items: center; font-weight: 600;
+}
+.wname { font-family: var(--cond); font-weight: 700; font-size: clamp(2.4rem, 6vw, 5rem); line-height: 1; }
+.wscore { font-size: clamp(1.2rem, 2vw, 1.8rem); color: var(--ch2); }
+.restrow { display: grid; grid-template-columns: 44px 1fr auto; gap: 20px;
+           font-size: 1.1rem; min-width: min(520px, 80vw); text-align: left; }
+
+/* signature: the response trace */
+.trace { position: fixed; left: 0; right: 0; bottom: 0; width: 100%; height: 90px;
+         pointer-events: none; }
+
+.audiobar {
+  position: fixed; right: 18px; top: 18px; display: flex; align-items: center;
+  gap: 10px; opacity: .28; transition: opacity .2s ease;
+}
+.audiobar:hover, .audiobar:focus-within { opacity: 1; }
+.audiobtn {
+  background: transparent; border: 1px solid var(--line); color: var(--dim);
+  padding: 7px 14px; border-radius: 3px; cursor: pointer;
+  font-family: var(--mono); font-size: .78rem;
+}
+.vol { width: 96px; accent-color: var(--ch2); }
+
+/* ========================= HOST ========================================== */
+
+.admin { padding: 22px; }
+.adminwrap { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+             max-width: 1400px; margin: 0 auto; align-items: start; }
+.panel { background: var(--panel); border: 1px solid var(--line);
+         border-radius: 4px; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.statusline { display: flex; gap: 18px; flex-wrap: wrap; font-size: .82rem; color: var(--dim); }
+.peek { font-size: 1.05rem; font-weight: 500; line-height: 1.35; }
+.peek p { margin: 0; }
+.peekkey { color: var(--ch3); font-size: .85rem; }
+.panel > .shiny-html-output > * + * { margin-top: 14px; }
+.ctlrow { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.ctl, .admin .btn {
+  display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+  padding: 12px 18px; border: 1px solid var(--line); border-radius: 3px;
+  background: var(--raise); color: var(--bone); cursor: pointer;
+  font-family: var(--cond); font-weight: 600; font-size: .92rem;
+  letter-spacing: .05em; text-transform: uppercase;
+}
+.ctl.primary { background: var(--ch2); color: var(--ink); border-color: var(--ch2); }
+.ctl.quiet { background: transparent; color: var(--dim); }
+.muted { color: var(--dim); font-size: .92rem; }
+.warn { color: var(--ch3); font-size: .88rem; line-height: 1.4; }
+.hint { color: var(--dim); font-size: .82rem; line-height: 1.4; }
+.note { color: var(--ch2); font-size: .88rem; line-height: 1.4; }
+.admin textarea.form-control { font-family: var(--mono); font-size: .82rem;
+                               line-height: 1.5; resize: vertical; }
+/* fileInput is a "Browse..." label over an off-screen native input plus a
+   readonly text box; both pick up .admin .btn and .admin .form-control. The
+   progress bar is Bootstrap's own and a quiz is a few KB, so it only ever
+   flashes — the result line below says what actually happened. */
+.admin .input-group { display: flex; }
+.admin .input-group .btn-file { white-space: nowrap; }
+.admin .progress { display: none; }
+.links { font-size: .82rem; color: var(--dim); }
+.linkrow { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.links code { color: var(--ch2); font-family: var(--mono); word-break: break-all; }
+
+.rosterlist { display: flex; flex-direction: column; gap: 6px;
+              max-height: 46vh; overflow-y: auto; }
+.rosterrow { display: grid; grid-template-columns: 32px 1fr auto;
+             gap: 12px; font-size: .95rem; padding: 5px 0;
+             border-bottom: 1px solid var(--line); }
+.rosterrow .mono:first-child { color: var(--dim); }
+.rosterrow .mono:last-child { color: var(--ch2); }
+
+/* tame Bootstrap */
+.admin .form-group, .play .form-group { margin: 0; }
+.admin label, .play label { color: var(--dim); font-size: .82rem;
+  font-family: var(--cond); letter-spacing: .1em; text-transform: uppercase; }
+.admin .form-control, .admin select {
+  background: var(--ink); color: var(--bone);
+  border: 1px solid var(--line); border-radius: 3px; padding: 10px; width: 100%;
+}
+.play .checkbox label, .play .shiny-options-group label {
+  text-transform: none; letter-spacing: 0; font-family: var(--sans);
+  font-size: 1.02rem; color: var(--bone);
+}
+.play .shiny-options-group { display: flex; flex-direction: column; gap: 8px; }
+/* Shiny caps input containers at 300px; the phone wants the full width. */
+.play .shiny-input-container:not(.shiny-input-container-inline) { width: 100%; }
+.play .checkbox { background: var(--panel); border: 1px solid var(--line);
+                  border-radius: 3px; padding: 12px 14px; margin: 0; }
+
+@media (max-width: 900px) {
+  .optgrid.big { grid-template-columns: 1fr; }
+  .lobbystage { grid-template-columns: 1fr; }
+  .qzone.withmedia { flex-direction: column; }
+  .qzone.withmedia .qmain, .qzone.withmedia .media { flex: 0 1 auto; }
+  .qzone.withmedia .qtext { max-width: none; }
+  .media img { max-height: 32vh; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+  .trace { display: none; }
+}

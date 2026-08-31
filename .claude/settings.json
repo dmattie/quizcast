@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(make:*)",
+      "Bash(Rscript:*)",
+      "Bash(R -q -e:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(rg:*)",
+      "Bash(grep:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(diff:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(docker build:*)",
+      "Edit(app.R)",
+      "Edit(lib/**)",
+      "Edit(www/**)",
+      "Edit(tests/**)",
+      "Edit(quizzes/**)",
+      "Edit(CLAUDE.md)",
+      "Edit(README.md)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(docker push:*)",
+      "Edit(Dockerfile)",
+      "Edit(deploy.sh)",
+      "Edit(Makefile)"
+    ],
+    "deny": [
+      "Bash(az:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(rm -rf:*)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(~/.azure/**)",
+      "Read(~/.ssh/**)"
+    ]
+  }
+}

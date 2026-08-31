@@ -1,0 +1,16 @@
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
+*.Rcheck/
+
+# Personal Claude Code overrides; project settings.json is committed.
+.claude/settings.local.json
+
+# Session exports and any real audio, which is usually licensed.
+quizcast-*.csv
+www/audio/*
+!www/audio/.gitkeep
+
+.DS_Store
