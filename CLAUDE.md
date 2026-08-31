@@ -94,6 +94,13 @@ front of a room full of people.
   on the projector. Don't try to route around this.
 - An open websocket keeps the Azure replica alive, so scale-to-zero only
   happens once the projector and admin tabs are closed.
+- **Shiny's client events arrive through jQuery, not the DOM.** `shiny.js`
+  fires them as `$(document).trigger({type: "shiny:disconnected"})`, and a
+  native `document.addEventListener("shiny:disconnected", ...)` never receives
+  a jQuery synthetic event. It fails silently, which cost a deploy to find.
+  Use `$(document).on(...)` inside `whenShiny`, which waits for `window.jQuery`
+  as well as `window.Shiny`. `visibilitychange` is a real DOM event and is
+  fine with `addEventListener`.
 - A phone that sleeps drops its socket, and Shiny then lays
   `#shiny-disconnected-overlay` over the page, which dims it and swallows every
   tap. That overlay is hidden in CSS; `Recover` in `www/quiz.js` reloads

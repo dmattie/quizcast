@@ -11,7 +11,7 @@
                 window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function whenShiny(fn) {
-    if (window.Shiny && window.Shiny.addCustomMessageHandler) { fn(); }
+    if (window.Shiny && window.Shiny.addCustomMessageHandler && window.jQuery) { fn(); }
     else { setTimeout(function () { whenShiny(fn); }, 50); }
   }
 
@@ -180,27 +180,68 @@
        - never reload a page nobody is looking at. A locked phone must not wake
          the container and hold the Azure replica open, billing, all evening.
        - give up after a few quick failures, so 50 phones cannot hammer a
-         server that is genuinely down. Then it is one tap, deliberately. */
+         server that is genuinely down. Then it is one tap, deliberately.
+
+     Shiny announces connect and disconnect through jQuery's synthetic trigger
+     ($(document).trigger("shiny:disconnected")), which a native
+     addEventListener never receives. Hence jQuery here, and hence the direct
+     socket probe as well: a phone can come back from sleep with its socket
+     already closed and no event left to deliver. */
   var Recover = {
-    dead: false, banner: null,
+    ready: false, dead: false, pending: false, banner: null,
 
     init: function () {
       var self = this;
-      document.addEventListener("shiny:disconnected", function () {
-        self.dead = true;
-        self.show("Reconnecting\u2026");
-        if (document.visibilityState === "visible") self.attempt();
+
+      whenShiny(function () {
+        var $ = window.jQuery;
+
+        $(document).on("shiny:connected", function () {
+          self.ready = true;
+          self.dead = false;
+          self.hide();
+          // Offer the stored alias back so a reload lands in the game rather
+          // than at the name gate. play_server is the only listener.
+          var a = null;
+          try { a = localStorage.getItem("qc-alias"); } catch (e) {}
+          if (a) Shiny.setInputValue("resume", a, { priority: "event" });
+        });
+
+        $(document).on("shiny:disconnected", function () { self.fail(); });
       });
+
+      // This one is a real DOM event, and it is what fires when the phone is
+      // unlocked. Probe rather than trust a flag: the disconnect may have
+      // happened while this page was frozen.
       document.addEventListener("visibilitychange", function () {
-        if (self.dead && document.visibilityState === "visible") self.attempt();
+        if (document.visibilityState !== "visible") return;
+        self.check();
+        setTimeout(function () { self.check(); }, 1500);
       });
     },
 
+    socketDead: function () {
+      try {
+        var s = window.Shiny && Shiny.shinyapp && Shiny.shinyapp.$socket;
+        return !s || s.readyState > 1;         // 2 CLOSING, 3 CLOSED
+      } catch (e) { return false; }
+    },
+
+    check: function () {
+      if (!this.ready) return;                 // never connected yet
+      if (this.dead || this.socketDead()) this.fail();
+    },
+
+    fail: function () {
+      this.dead = true;
+      this.show("Reconnecting\u2026");
+      if (document.visibilityState === "visible") this.attempt();
+    },
+
     attempt: function () {
-      if (this.tooMany()) {
-        this.show("Tap to reconnect", true);
-        return;
-      }
+      if (this.pending) return;
+      if (this.tooMany()) { this.show("Tap to reconnect", true); return; }
+      this.pending = true;
       // Jitter, because a server restart disconnects the whole room at once.
       setTimeout(function () { location.reload(); }, 300 + Math.random() * 1200);
     },
@@ -224,7 +265,9 @@
       this.banner.textContent = text;
       this.banner.classList.toggle("tappable", !!tappable);
       this.banner.onclick = tappable ? function () { location.reload(); } : null;
-    }
+    },
+
+    hide: function () { if (this.banner) this.banner.remove(); this.banner = null; }
   };
 
   /* ---------------- wiring ---------------- */
@@ -233,14 +276,6 @@
     if (canvas) Trace.init(canvas);
     audioSetup();
     Recover.init();
-  });
-
-  /* Offer the stored alias back as soon as there is a socket to offer it on.
-     Only play_server listens for it; the other roles ignore it. */
-  document.addEventListener("shiny:connected", function () {
-    var a = null;
-    try { a = localStorage.getItem("qc-alias"); } catch (e) {}
-    if (a) Shiny.setInputValue("resume", a, { priority: "event" });
   });
 
   whenShiny(function () {
