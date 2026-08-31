@@ -143,6 +143,42 @@ az containerapp update -g quizcast-rg -n quizcast --image <registry>.azurecr.io/
 
 Quizzes don't need any of that — upload them in the panel.
 
+### Building without ACR Tasks
+
+Student, free and sponsored subscriptions can hold images in a registry but
+cannot use ACR Tasks, the cloud-side builder, so `az acr build` fails with
+`TasksOperationsNotAllowed`. `deploy.sh` notices and builds locally instead,
+which needs Docker running. Two things about that build:
+
+- `--platform linux/amd64` is passed for you and matters on an Apple Silicon
+  Mac. Container Apps runs amd64; an arm64 image is accepted by the registry
+  and then fails at startup without explaining itself.
+- Under emulation the R package layer takes a few minutes the first time. It
+  is cached afterwards.
+
+No Docker? `.github/workflows/publish.yml` builds the image on GitHub's
+runners and publishes it to GHCR on every push to the default branch. It
+builds `linux/amd64`, then starts the published image and waits for it to
+serve a page, so a container that builds but doesn't boot fails in CI rather
+than in a lecture theatre.
+
+After the first successful run, make the package public — repository →
+**Packages** → **quizcast** → **Package settings** → **Change visibility** —
+then point the app at it:
+
+```bash
+az containerapp update -g quizcast-rg -n quizcast \
+  --image ghcr.io/<you>/quizcast:latest
+```
+
+A public image needs no registry credentials on the app, which means the ACR
+can be deleted along with its ~$5/month. Two caveats. A public image is
+readable by anyone, and the image contains `quizzes/` — including the answer
+keys; keep the package private (and give the app a PAT as registry
+credentials) or keep the graded quizzes out of the image and upload them on
+the day. And Container Apps caches by tag, so redeploying `:latest` may want
+`--revision-suffix` or an explicit digest to force the pull.
+
 ### Keeping uploads across restarts
 
 Optional. Without it, uploaded quizzes vanish when the replica stops, which is

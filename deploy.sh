@@ -20,7 +20,11 @@ TAG=${TAG:-v1}
 ADMIN_KEY=${ADMIN_KEY:-$(openssl rand -hex 12)}
 PRESENT_KEY=${PRESENT_KEY:-$(openssl rand -hex 8)}
 
+# A fresh subscription has none of these namespaces switched on, and each one
+# fails a different step of this script if it is missing. Registering is
+# idempotent and takes a minute or two the first time.
 az extension add --name containerapp --upgrade --only-show-errors
+az provider register --namespace Microsoft.ContainerRegistry --wait
 az provider register --namespace Microsoft.App --wait
 az provider register --namespace Microsoft.OperationalInsights --wait
 
@@ -28,10 +32,27 @@ az group create -n "$RG" -l "$LOC" -o none
 
 # --- registry --------------------------------------------------------------
 az acr create -g "$RG" -n "$ACR" --sku Basic --admin-enabled true -o none
-az acr build -g "$RG" -r "$ACR" -t "$APP:$TAG" . -o none
 LOGIN=$(az acr show -g "$RG" -n "$ACR" --query loginServer -o tsv)
 ACR_USER=$(az acr credential show -g "$RG" -n "$ACR" --query username -o tsv)
 ACR_PASS=$(az acr credential show -g "$RG" -n "$ACR" --query 'passwords[0].value' -o tsv)
+
+# --- image -----------------------------------------------------------------
+# The cloud build (ACR Tasks) is switched off on student, free and sponsored
+# subscriptions, so fall back to building here and pushing. --platform is not
+# optional on an Apple Silicon Mac: Container Apps runs linux/amd64, and an
+# arm64 image fails at startup without saying why.
+if ! az acr build -g "$RG" -r "$ACR" -t "$APP:$TAG" . -o none; then
+  echo
+  echo "  Cloud build unavailable on this subscription. Building locally."
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "  Docker is needed for the local build; see 'Building without ACR"
+    echo "  Tasks' in README.md for the build-on-GitHub route instead." >&2
+    exit 1
+  fi
+  echo "$ACR_PASS" | docker login "$LOGIN" -u "$ACR_USER" --password-stdin
+  docker build --platform linux/amd64 -t "$LOGIN/$APP:$TAG" .
+  docker push "$LOGIN/$APP:$TAG"
+fi
 
 # --- environment -----------------------------------------------------------
 az containerapp env create -g "$RG" -n "$ENVNAME" -l "$LOC" -o none
