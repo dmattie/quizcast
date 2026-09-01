@@ -4,6 +4,8 @@
 .Ruserdata
 *.Rproj
 *.Rcheck/
+CLAUDE.md
+.claude
 
 # Personal Claude Code overrides; project settings.json is committed.
 .claude/settings.local.json
