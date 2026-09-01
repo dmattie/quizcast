@@ -260,10 +260,3 @@ student who clears their browser can start again under a new name, and one who
 clears it mid-quiz loses their score, which is what the host's kick control is
 for: drop the name and let them rejoin.
 
-## Working on it with Claude Code
-
-`CLAUDE.md` carries the project's invariants and the reasoning behind the
-non-obvious ones. `.claude/settings.json` pre-approves the safe commands and
-denies `az`, so nothing in a coding session can create billable Azure
-resources. Two skills are included: `/new-question` scaffolds a question in the
-house format, and `/run-quizcast` records how to launch and verify the app.
